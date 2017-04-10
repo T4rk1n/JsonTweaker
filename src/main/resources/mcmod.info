@@ -1,0 +1,20 @@
+[
+  {
+    "modid": "jsonrecipes",
+    "name": "JsonRecipes",
+    "description": "Add recipes using json.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "url": "",
+    "updateUrl": "",
+    "authorList": [
+      "Tark"
+    ],
+    "credits": "",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": [
+      ""
+    ]
+  }
+]
