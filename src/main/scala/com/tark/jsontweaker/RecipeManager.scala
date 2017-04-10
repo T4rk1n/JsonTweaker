@@ -1,4 +1,4 @@
-package com.tark.jsonrecipes
+package com.tark.jsontweaker
 
 import java.io.{BufferedWriter, File, FileReader, FileWriter}
 import java.nio.file.Files
@@ -104,7 +104,7 @@ case class ShapedJsonRecipe(var output: String="", var recipeSize: Int=3) {
         if (domain == "ore") recipeObjects += name
         else recipeObjects += ItemChecker getItemStackFromString itemKey
     }
-    JsonRecipes.castRecipes(outputStack, recipeObjects.result().toArray[AnyRef])
+    JsonTweaker.castRecipes(outputStack, recipeObjects.result().toArray[AnyRef])
   }
 }
 
@@ -196,7 +196,7 @@ case class JsonRecipesHolder(file: File) {
   * @param modId modId to create a folder and cfg
   */
 class RecipeManager(configDir: String, modId: String) {
-  val LOGGER: Logger = LogManager.getLogger(JsonRecipes.MOD_ID)
+  val LOGGER: Logger = LogManager.getLogger(JsonTweaker.MOD_ID)
   val craftingManager: CraftingManager = CraftingManager.getInstance()
   var enableDefaultRecipes: Boolean = true
 
@@ -249,7 +249,7 @@ class RecipeManager(configDir: String, modId: String) {
   }
 
   def removeRecipe(output: String, firstOnly: Boolean=true): Unit = {
-    val outputStack = ItemChecker.getItemStackFromString(output)
+    val outputStack = ItemChecker getItemStackFromString output
     val recipes = craftingManager.getRecipeList
     val recIt = recipes.iterator
     val toRemove = mutable.ArrayBuffer.newBuilder[IRecipe]

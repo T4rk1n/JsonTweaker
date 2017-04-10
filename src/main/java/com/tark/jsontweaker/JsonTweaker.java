@@ -1,8 +1,6 @@
-package com.tark.jsonrecipes;
+package com.tark.jsontweaker;
 
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.CraftingManager;
-import net.minecraft.item.crafting.IRecipe;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
@@ -11,18 +9,16 @@ import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.oredict.ShapedOreRecipe;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 @Mod(
-        modid = JsonRecipes.MOD_ID,
-        name = JsonRecipes.MOD_NAME,
-        version = JsonRecipes.VERSION
+        modid = JsonTweaker.MOD_ID,
+        name = JsonTweaker.MOD_NAME,
+        version = JsonTweaker.VERSION
 )
-public class JsonRecipes {
+public class JsonTweaker {
 
-    public static final String MOD_ID = "jsonrecipes";
-    static final String MOD_NAME = "JsonRecipes";
+    public static final String MOD_ID = "jsontweaker";
+    static final String MOD_NAME = "JsonTweaker";
     static final String VERSION = "0.0.1.0";
 
     private RecipeManager recipeManager;

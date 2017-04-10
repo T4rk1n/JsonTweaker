@@ -1,7 +1,7 @@
 [
   {
-    "modid": "jsonrecipes",
-    "name": "JsonRecipes",
+    "modid": "jsontweaker",
+    "name": "JsonTweaker",
     "description": "Add recipes using json.",
     "version": "${version}",
     "mcversion": "${mcversion}",
@@ -10,7 +10,7 @@
     "authorList": [
       "Tark"
     ],
-    "credits": "",
+    "credits": "Minetweaker for the inspiration of the item string pattern.",
     "logoFile": "",
     "screenshots": [],
     "dependencies": [
