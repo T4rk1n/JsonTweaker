@@ -13,7 +13,8 @@ import java.io.File;
 @Mod(
         modid = JsonTweaker.MOD_ID,
         name = JsonTweaker.MOD_NAME,
-        version = JsonTweaker.VERSION
+        version = JsonTweaker.VERSION,
+        acceptedMinecraftVersions = "1.11.2"
 )
 public class JsonTweaker {
 
