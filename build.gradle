@@ -15,9 +15,10 @@ apply plugin: "scala"
 apply plugin: "net.minecraftforge.gradle.forge"
 
 
-version = modVersion
+version = modVersion.replace("x", buildNumber.toString())
 group = modGroup
 archivesBaseName = modBaseName
+
 
 sourceSets {
     main {
@@ -73,4 +74,12 @@ processResources {
     from(sourceSets.main.resources.srcDirs) {
         exclude "mcmod.info"
     }
+}
+
+task('incBuild') {
+    Properties prop = new Properties()
+    File file = new File('gradle.properties')
+    prop.load(file.newDataInputStream())
+    prop.setProperty('buildNumber', ((prop.get('buildNumber') as Integer) + 1).toString())
+    prop.store(file.newWriter(), null)
 }

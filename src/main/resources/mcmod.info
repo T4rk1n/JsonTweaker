@@ -13,8 +13,6 @@
     "credits": "Minetweaker for the inspiration of the item string pattern.",
     "logoFile": "",
     "screenshots": [],
-    "dependencies": [
-      ""
-    ]
+    "dependencies": []
   }
 ]

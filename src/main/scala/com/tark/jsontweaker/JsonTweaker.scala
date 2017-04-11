@@ -9,6 +9,9 @@ import net.minecraft.item.{Item, ItemStack}
 import net.minecraft.item.crafting.{CraftingManager, IRecipe}
 import net.minecraft.util.ResourceLocation
 import net.minecraftforge.common.config.Configuration
+import net.minecraftforge.fml.common.Mod
+import net.minecraftforge.fml.common.Mod.EventHandler
+import net.minecraftforge.fml.common.event.{FMLPostInitializationEvent, FMLPreInitializationEvent}
 import net.minecraftforge.oredict.ShapedOreRecipe
 import org.apache.logging.log4j.{LogManager, Logger}
 
@@ -104,7 +107,7 @@ case class ShapedJsonRecipe(var output: String="", var recipeSize: Int=3) {
         if (domain == "ore") recipeObjects += name
         else recipeObjects += ItemChecker getItemStackFromString itemKey
     }
-    JsonTweaker.castRecipes(outputStack, recipeObjects.result().toArray[AnyRef])
+    JsonTweaker.castRecipes(outputStack, recipeObjects.result().toArray)
   }
 }
 
@@ -190,22 +193,25 @@ case class JsonRecipesHolder(file: File) {
   }
 }
 
-/**
-  *
-  * @param configDir main directory of the configs.
-  * @param modId modId to create a folder and cfg
-  */
-class RecipeManager(configDir: String, modId: String) {
-  val LOGGER: Logger = LogManager.getLogger(JsonTweaker.MOD_ID)
+@Mod(modid = Tweaker.MODID, name = Tweaker.MOD_NAME, version = Tweaker.VERSION, acceptedMinecraftVersions = "1.11.2", modLanguage = "scala")
+object Tweaker {
+  final val MODID = "jsontweaker"
+  final val MOD_NAME = "JsonTweaker"
+  final val VERSION = "0.0.1.1"
+  val LOGGER: Logger = LogManager.getLogger(MODID)
   val craftingManager: CraftingManager = CraftingManager.getInstance()
-  var enableDefaultRecipes: Boolean = true
 
-  def preInit(): Unit = {
-    val configs = new Configuration(new File(s"$configDir/$modId/$modId.cfg"))
+  var enableDefaultRecipes = true
+  var configDir = ""
+
+  @EventHandler
+  def preInit(event : FMLPreInitializationEvent): Unit = {
+    configDir = event.getModConfigurationDirectory.getAbsolutePath
+    val configs = new Configuration(new File(s"$configDir/$MODID/$MODID.cfg"))
     configs.setCategoryRequiresMcRestart("recipes", true)
     enableDefaultRecipes = configs.getBoolean("enableDefaultRecipes", "recipes", true, "Enable the default recipes in vanilla.json")
     configs.save()
-    val defaultRecipeFile = new File(s"$configDir/$modId/vanilla.json")
+    val defaultRecipeFile = new File(s"$configDir/$MODID/vanilla.json")
     if (!defaultRecipeFile.exists()) {
       LOGGER.info("Creating default recipes.")
       val vanillaRecipes = JsonRecipesHolder(defaultRecipeFile)
@@ -217,8 +223,9 @@ class RecipeManager(configDir: String, modId: String) {
     }
   }
 
-  def postInit(): Unit = {
-    val walk = Files.walk(new File(s"$configDir/$modId").toPath).iterator
+  @EventHandler
+  def postInit(event : FMLPostInitializationEvent): Unit = {
+    val walk = Files.walk(new File(s"$configDir/$MODID").toPath).iterator
     while (walk.hasNext) {
       val file = walk.next
       val fileName = file.toFile.getName
@@ -264,3 +271,4 @@ class RecipeManager(configDir: String, modId: String) {
     recipes.removeAll(toRemove.result.to[List].asJava)
   }
 }
+
