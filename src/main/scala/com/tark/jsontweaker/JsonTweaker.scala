@@ -254,8 +254,8 @@ object Tweaker {
             try {
               LOGGER info s"processing $fileName"
               val rec = JsonRecipesHolder(new File(file.toUri)).readFile()
-              rec.shapedRecipes.result foreach registerJsonRecipe
               removeRecipe(rec.removeRecipes.result.toArray, firstOnly = false)
+              rec.shapedRecipes.result foreach registerJsonRecipe
             } catch {
               case e: Exception =>
                 LOGGER catching e
