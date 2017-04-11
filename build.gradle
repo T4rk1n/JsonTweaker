@@ -75,11 +75,3 @@ processResources {
         exclude "mcmod.info"
     }
 }
-
-task('incBuild') {
-    Properties prop = new Properties()
-    File file = new File('gradle.properties')
-    prop.load(file.newDataInputStream())
-    prop.setProperty('buildNumber', ((prop.get('buildNumber') as Integer) + 1).toString())
-    prop.store(file.newWriter(), null)
-}

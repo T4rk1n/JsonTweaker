@@ -2,17 +2,22 @@ package com.tark.jsontweaker
 
 import java.io.{BufferedWriter, File, FileReader, FileWriter}
 import java.nio.file.Files
+import java.util
 
 import com.google.gson._
 import com.google.gson.stream.JsonReader
+import net.minecraft.command.{ICommand, ICommandSender}
 import net.minecraft.item.{Item, ItemStack}
 import net.minecraft.item.crafting.{CraftingManager, IRecipe}
+import net.minecraft.server.MinecraftServer
 import net.minecraft.util.ResourceLocation
+import net.minecraft.util.math.BlockPos
 import net.minecraftforge.common.config.Configuration
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventHandler
 import net.minecraftforge.fml.common.event.{FMLPostInitializationEvent, FMLPreInitializationEvent}
 import net.minecraftforge.oredict.ShapedOreRecipe
+import net.minecraftforge.server.permission.DefaultPermissionLevel
 import org.apache.logging.log4j.{LogManager, Logger}
 
 import scala.collection.JavaConverters._
@@ -143,28 +148,35 @@ object ItemChecker {
   * @param file holding the recipes
   */
 case class JsonRecipesHolder(file: File) {
-  var shapedRecipes: mutable.Builder[ShapedJsonRecipe, ArrayBuffer[ShapedJsonRecipe]] = mutable.ArrayBuffer.newBuilder[ShapedJsonRecipe]
+  val shapedRecipes: mutable.Builder[ShapedJsonRecipe, ArrayBuffer[ShapedJsonRecipe]] = mutable.ArrayBuffer.newBuilder[ShapedJsonRecipe]
+  var removeRecipes: mutable.Builder[String, ArrayBuffer[String]] = mutable.ArrayBuffer.newBuilder[String]
 
   def readFile(): JsonRecipesHolder = {
     val reader = new JsonReader(new FileReader(file))
     val parser = new JsonParser()
     val jsonObject = parser.parse(reader).getAsJsonObject
     reader.close()
-    val shaped = jsonObject.getAsJsonArray("shaped").iterator
-    while (shaped.hasNext) {
-      val rec = shaped.next.getAsJsonObject
-      val recOut = rec.get("output").getAsString
-      val recIn = rec.get("input").getAsJsonArray
-      val recIt = recIn.iterator()
-      val currentRecipe = ShapedJsonRecipe(recOut, recIn.size)
-      while (recIt.hasNext) {
-        val curRow = recIt.next().getAsJsonArray
-        recIn.size match {
-          case 2 => currentRecipe.addInputRow(curRow.get(0).getAsString,curRow.get(1).getAsString)
-          case 3 => currentRecipe.addInputRow(curRow.get(0).getAsString, curRow.get(1).getAsString, curRow.get(2).getAsString)
+    if (jsonObject.has("shaped")) {
+      val shaped = jsonObject.getAsJsonArray("shaped").iterator
+      while (shaped.hasNext) {
+        val rec = shaped.next.getAsJsonObject
+        val recOut = rec.get("output").getAsString
+        val recIn = rec.get("input").getAsJsonArray
+        val recIt = recIn.iterator()
+        val currentRecipe = ShapedJsonRecipe(recOut, recIn.size)
+        while (recIt.hasNext) {
+          val curRow = recIt.next().getAsJsonArray
+          recIn.size match {
+            case 2 => currentRecipe.addInputRow(curRow.get(0).getAsString,curRow.get(1).getAsString)
+            case 3 => currentRecipe.addInputRow(curRow.get(0).getAsString, curRow.get(1).getAsString, curRow.get(2).getAsString)
+          }
         }
+        addShapedRecipe(currentRecipe)
       }
-      addShapedRecipe(currentRecipe)
+    }
+    if (jsonObject.has("remove")) {
+      val removal = jsonObject.getAsJsonArray("remove").iterator()
+      while (removal.hasNext) addRemove(removal.next.getAsString)
     }
     this
   }
@@ -189,6 +201,11 @@ case class JsonRecipesHolder(file: File) {
 
   def addShapedRecipe(shapedJsonRecipe: ShapedJsonRecipe): JsonRecipesHolder = {
     shapedRecipes += shapedJsonRecipe
+    this
+  }
+
+  def addRemove(toRemove: String): JsonRecipesHolder = {
+    removeRecipes += toRemove
     this
   }
 }
@@ -225,6 +242,10 @@ object Tweaker {
 
   @EventHandler
   def postInit(event : FMLPostInitializationEvent): Unit = {
+    readRecipesFiles()
+  }
+
+  def readRecipesFiles(): Unit = {
     val walk = Files.walk(new File(s"$configDir/$MODID").toPath).iterator
     while (walk.hasNext) {
       val file = walk.next
@@ -233,7 +254,9 @@ object Tweaker {
         if (!((fileName contains "vanilla") && !enableDefaultRecipes)) {
           LOGGER info s"processing $fileName"
           try {
-            JsonRecipesHolder(new File(file.toUri)).readFile().shapedRecipes.result foreach registerJsonRecipe
+            val rec = JsonRecipesHolder(new File(file.toUri)).readFile()
+            rec.shapedRecipes.result foreach registerJsonRecipe
+            removeRecipe(rec.removeRecipes.result.toArray, firstOnly = false)
           }
           catch {
             case e: Exception =>
@@ -255,19 +278,22 @@ object Tweaker {
     }
   }
 
-  def removeRecipe(output: String, firstOnly: Boolean=true): Unit = {
-    val outputStack = ItemChecker getItemStackFromString output
+  def removeRecipe(output: Array[String], firstOnly: Boolean=true): Unit = {
+    val outputStacks = output map (item => ItemChecker getItemStackFromString item)
     val recipes = craftingManager.getRecipeList
     val recIt = recipes.iterator
     val toRemove = mutable.ArrayBuffer.newBuilder[IRecipe]
-    var stop = false
-    while (recIt.hasNext && !stop) {
+    def i() { while (recIt.hasNext) {
       val rec = recIt.next
-      if (outputStack isItemEqual rec.getRecipeOutput) {
-        toRemove += rec
-        if (firstOnly) stop = true
-      }
-    }
+      def re() : Boolean  = {
+        outputStacks foreach(item => {
+          if (item isItemEqual rec.getRecipeOutput) {
+            toRemove += rec
+            if (firstOnly) return true
+          }})
+        false }
+      re()}}
+    i()
     recipes.removeAll(toRemove.result.to[List].asJava)
   }
 }
