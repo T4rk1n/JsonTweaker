@@ -2,28 +2,26 @@ package com.tark.jsontweaker
 
 import java.io.{BufferedWriter, File, FileReader, FileWriter}
 import java.nio.file.Files
-import java.util
 
 import com.google.gson._
 import com.google.gson.stream.JsonReader
-import net.minecraft.command.{ICommand, ICommandSender}
 import net.minecraft.item.{Item, ItemStack}
 import net.minecraft.item.crafting.{CraftingManager, IRecipe}
-import net.minecraft.server.MinecraftServer
 import net.minecraft.util.ResourceLocation
-import net.minecraft.util.math.BlockPos
 import net.minecraftforge.common.config.Configuration
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventHandler
 import net.minecraftforge.fml.common.event.{FMLPostInitializationEvent, FMLPreInitializationEvent}
+import net.minecraftforge.fml.common.registry.GameRegistry
 import net.minecraftforge.oredict.ShapedOreRecipe
-import net.minecraftforge.server.permission.DefaultPermissionLevel
 import org.apache.logging.log4j.{LogManager, Logger}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.Future
 import scala.util.matching.Regex
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
   * Shaped recipe creator
@@ -252,17 +250,19 @@ object Tweaker {
       val fileName = file.toFile.getName
       if (fileName endsWith "json") {
         if (!((fileName contains "vanilla") && !enableDefaultRecipes)) {
-          LOGGER info s"processing $fileName"
-          try {
-            val rec = JsonRecipesHolder(new File(file.toUri)).readFile()
-            rec.shapedRecipes.result foreach registerJsonRecipe
-            removeRecipe(rec.removeRecipes.result.toArray, firstOnly = false)
+          def doIt() : Future[Unit] = Future {
+            try {
+              LOGGER info s"processing $fileName"
+              val rec = JsonRecipesHolder(new File(file.toUri)).readFile()
+              rec.shapedRecipes.result foreach registerJsonRecipe
+              removeRecipe(rec.removeRecipes.result.toArray, firstOnly = false)
+            } catch {
+              case e: Exception =>
+                LOGGER catching e
+                LOGGER error s"Failed to process $fileName"
+            }
           }
-          catch {
-            case e: Exception =>
-              LOGGER catching e
-              LOGGER error s"Failed to process $fileName"
-          }
+          doIt()
         }
       }
     }
@@ -292,7 +292,7 @@ object Tweaker {
             if (firstOnly) return true
           }})
         false }
-      re()}}
+      if (re()) return }}
     i()
     recipes.removeAll(toRemove.result.to[List].asJava)
   }
