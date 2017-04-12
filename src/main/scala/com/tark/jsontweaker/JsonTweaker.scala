@@ -207,6 +207,12 @@ case class JsonRecipesHolder(file: File) {
   }
 }
 
+object Configs {
+  var enableDefaultRecipes = true
+  var enableReloadCommand = true
+}
+
+
 @Mod(modid = Tweaker.MODID, name = Tweaker.MOD_NAME, version = Tweaker.VERSION, acceptedMinecraftVersions = "1.11.2", modLanguage = "scala")
 object Tweaker {
   final val MODID = "jsontweaker"
@@ -224,9 +230,9 @@ object Tweaker {
   @EventHandler
   def preInit(event : FMLPreInitializationEvent): Unit = {
     configDir = event.getModConfigurationDirectory.getAbsolutePath
-    val configs = new Configuration(new File(s"$configDir/$MODID/$MODID.cfg"))
-    configs.setCategoryRequiresMcRestart("recipes", true)
-    enableDefaultRecipes = configs.getBoolean("enableDefaultRecipes", "recipes", true, "Enable the default recipes in vanilla.json")
+    val configs = new Configuration(new File(s"$configDir/$MODID/$MODID.cfg"), "2")
+    Configs.enableDefaultRecipes = configs.getBoolean("enableDefaultRecipes", "recipes", true, "Enable the default recipes in vanilla.json")
+    Configs.enableReloadCommand = configs.getBoolean("enableReloadCommand","commands", true, "Enable the command to reload the recipes.")
     configs.save()
     val defaultRecipeFile = new File(s"$configDir/$MODID/vanilla.json")
     if (!defaultRecipeFile.exists()) {
@@ -247,7 +253,7 @@ object Tweaker {
 
   @EventHandler
   def onServerStarting(event: FMLServerStartingEvent) : Unit = {
-    event.registerServerCommand(new ReloadCommand)
+    if (Configs.enableReloadCommand) event.registerServerCommand(new ReloadCommand)
   }
 
   def readRecipesFiles(): Future[Unit] = Future {
@@ -256,7 +262,7 @@ object Tweaker {
       val file = walk.next
       val fileName = file.toFile.getName
       if (fileName endsWith "json") {
-        if (!((fileName contains "vanilla") && !enableDefaultRecipes)) {
+        if (!((fileName contains "vanilla") && !Configs.enableDefaultRecipes)) {
           try {
             LOGGER info s"processing $fileName"
             val rec = JsonRecipesHolder(new File(file.toUri)).readFile()
