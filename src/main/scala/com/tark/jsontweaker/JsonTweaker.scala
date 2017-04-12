@@ -5,13 +5,16 @@ import java.nio.file.Files
 
 import com.google.gson._
 import com.google.gson.stream.JsonReader
+import mezz.jei.api.IJeiRuntime
 import net.minecraft.item.{Item, ItemStack}
 import net.minecraft.item.crafting.{CraftingManager, IRecipe}
 import net.minecraft.util.ResourceLocation
+import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.common.config.Configuration
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventHandler
-import net.minecraftforge.fml.common.event.{FMLPostInitializationEvent, FMLPreInitializationEvent}
+import net.minecraftforge.fml.common.event.{FMLPostInitializationEvent, FMLPreInitializationEvent, FMLServerStartingEvent}
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.registry.GameRegistry
 import net.minecraftforge.oredict.ShapedOreRecipe
 import org.apache.logging.log4j.{LogManager, Logger}
@@ -216,8 +219,10 @@ object Tweaker {
   val LOGGER: Logger = LogManager.getLogger(MODID)
   val craftingManager: CraftingManager = CraftingManager.getInstance()
 
+  var removedRecipes: Array[IRecipe] = Array[IRecipe]()
   var enableDefaultRecipes = true
   var configDir = ""
+  var jeiRuntime: IJeiRuntime = _
 
   @EventHandler
   def preInit(event : FMLPreInitializationEvent): Unit = {
@@ -243,26 +248,28 @@ object Tweaker {
     readRecipesFiles()
   }
 
-  def readRecipesFiles(): Unit = {
+  @EventHandler
+  def onServerStarting(event: FMLServerStartingEvent) : Unit = {
+    event.registerServerCommand(new ReloadCommand)
+  }
+
+  def readRecipesFiles(): Future[Unit] = Future {
     val walk = Files.walk(new File(s"$configDir/$MODID").toPath).iterator
     while (walk.hasNext) {
       val file = walk.next
       val fileName = file.toFile.getName
       if (fileName endsWith "json") {
         if (!((fileName contains "vanilla") && !enableDefaultRecipes)) {
-          def doIt() : Future[Unit] = Future {
-            try {
-              LOGGER info s"processing $fileName"
-              val rec = JsonRecipesHolder(new File(file.toUri)).readFile()
-              removeRecipe(rec.removeRecipes.result.toArray, firstOnly = false)
-              rec.shapedRecipes.result foreach registerJsonRecipe
-            } catch {
-              case e: Exception =>
-                LOGGER catching e
-                LOGGER error s"Failed to process $fileName"
-            }
+          try {
+            LOGGER info s"processing $fileName"
+            val rec = JsonRecipesHolder(new File(file.toUri)).readFile()
+            removeRecipe(rec.removeRecipes.result.toArray, firstOnly = false)
+            rec.shapedRecipes.result foreach registerJsonRecipe
+          } catch {
+            case e: Exception =>
+              LOGGER catching e
+              LOGGER error s"Failed to process $fileName"
           }
-          doIt()
         }
       }
     }
@@ -278,6 +285,10 @@ object Tweaker {
     }
   }
 
+  def reloadRemoved(): Unit = {
+
+  }
+
   def removeRecipe(output: Array[String], firstOnly: Boolean=true): Unit = {
     val outputStacks = output map (item => ItemChecker getItemStackFromString item)
     val recipes = craftingManager.getRecipeList
@@ -288,13 +299,14 @@ object Tweaker {
       def re() : Boolean  = {
         outputStacks foreach(item => {
           if (item isItemEqual rec.getRecipeOutput) {
+            recIt.remove()
             toRemove += rec
             if (firstOnly) return true
           }})
         false }
       if (re()) return }}
     i()
-    recipes.removeAll(toRemove.result.to[List].asJava)
+    removedRecipes = toRemove.result.to[Array]
   }
 }
 
