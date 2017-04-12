@@ -223,7 +223,7 @@ object Tweaker {
 
   var removedRecipes: Array[IRecipe] = Array[IRecipe]()
   var addedRecipes: Array[String] = Array[String]()
-  var enableDefaultRecipes = true
+
   var configDir = ""
   var jeiRuntime: IJeiRuntime = _
 
@@ -269,7 +269,7 @@ object Tweaker {
             removeRecipe(rec.removeRecipes.result.toArray, firstOnly = false)
             val recipeResults = rec.shapedRecipes.result
             addedRecipes = addedRecipes ++ recipeResults.map (out => out.output)
-            rec.shapedRecipes.result foreach registerJsonRecipe
+            recipeResults foreach registerJsonRecipe
           } catch {
             case e: Exception =>
               LOGGER catching e
@@ -296,6 +296,7 @@ object Tweaker {
   }
 
   def reload(): Future[Unit] = Future {
+    LOGGER info "Reloading files."
     removedRecipes foreach addRecipeToRegistry
     removeRecipe(addedRecipes)
     removedRecipes = Array[IRecipe]()
