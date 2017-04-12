@@ -9,17 +9,13 @@ import mezz.jei.api.IJeiRuntime
 import net.minecraft.item.{Item, ItemStack}
 import net.minecraft.item.crafting.{CraftingManager, IRecipe}
 import net.minecraft.util.ResourceLocation
-import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.common.config.Configuration
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventHandler
 import net.minecraftforge.fml.common.event.{FMLPostInitializationEvent, FMLPreInitializationEvent, FMLServerStartingEvent}
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
-import net.minecraftforge.fml.common.registry.GameRegistry
 import net.minecraftforge.oredict.ShapedOreRecipe
 import org.apache.logging.log4j.{LogManager, Logger}
 
-import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
@@ -220,6 +216,7 @@ object Tweaker {
   val craftingManager: CraftingManager = CraftingManager.getInstance()
 
   var removedRecipes: Array[IRecipe] = Array[IRecipe]()
+  var addedRecipes: Array[String] = Array[String]()
   var enableDefaultRecipes = true
   var configDir = ""
   var jeiRuntime: IJeiRuntime = _
@@ -264,6 +261,8 @@ object Tweaker {
             LOGGER info s"processing $fileName"
             val rec = JsonRecipesHolder(new File(file.toUri)).readFile()
             removeRecipe(rec.removeRecipes.result.toArray, firstOnly = false)
+            val recipeResults = rec.shapedRecipes.result
+            addedRecipes = addedRecipes ++ recipeResults.map (out => out.output)
             rec.shapedRecipes.result foreach registerJsonRecipe
           } catch {
             case e: Exception =>
@@ -277,7 +276,7 @@ object Tweaker {
 
   def registerJsonRecipe(jsonRecipe: ShapedJsonRecipe ): Unit = {
     try {
-      craftingManager.addRecipe(jsonRecipe.toShapedOreRecipe)
+      addRecipeToRegistry(jsonRecipe.toShapedOreRecipe)
     } catch {
       case e: Exception =>
         LOGGER catching e
@@ -285,8 +284,17 @@ object Tweaker {
     }
   }
 
-  def reloadRemoved(): Unit = {
+  def addRecipeToRegistry(iRecipe: IRecipe): Unit = {
+    craftingManager.addRecipe(iRecipe)
+    if (jeiRuntime != null) jeiRuntime.getRecipeRegistry.addRecipe(iRecipe)
+  }
 
+  def reload(): Future[Unit] = Future {
+    removedRecipes foreach addRecipeToRegistry
+    removeRecipe(addedRecipes)
+    removedRecipes = Array[IRecipe]()
+    addedRecipes = Array[String]()
+    readRecipesFiles()
   }
 
   def removeRecipe(output: Array[String], firstOnly: Boolean=true): Unit = {
@@ -306,7 +314,9 @@ object Tweaker {
         false }
       if (re()) return }}
     i()
-    removedRecipes = toRemove.result.to[Array]
+    val removed = toRemove.result.to[Array]
+    removedRecipes = removedRecipes ++ removed
+    if (jeiRuntime != null) removed foreach jeiRuntime.getRecipeRegistry.removeRecipe
   }
 }
 

@@ -5,7 +5,6 @@ import java.util
 import net.minecraft.command.{ICommand, ICommandSender}
 import net.minecraft.server.MinecraftServer
 import net.minecraft.util.math.BlockPos
-import net.minecraftforge.server.permission.DefaultPermissionLevel
 
 trait CommandTrait extends ICommand {
   def requireOp : Boolean
@@ -37,7 +36,7 @@ class ReloadCommand extends CommandTrait {
   override def getName: String = "jtreload"
 
   override def execute(server: MinecraftServer, sender: ICommandSender, args: Array[String]): Unit = {
-    Tweaker.readRecipesFiles()
+    Tweaker.reload()
   }
 
   override def getTabCompletions(server: MinecraftServer, sender: ICommandSender, args: Array[String], targetPos: BlockPos): util.List[String] = {
