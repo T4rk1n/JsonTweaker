@@ -150,9 +150,12 @@ case class JsonRecipesHolder(file: File) {
 
   def readFile(): JsonRecipesHolder = {
     val reader = new JsonReader(new FileReader(file))
-    val parser = new JsonParser()
-    val jsonObject = parser.parse(reader).getAsJsonObject
+    val jsonObject = (new JsonParser() parse reader).getAsJsonObject
     reader.close()
+    if (jsonObject.has("remove")) {
+      val removal = jsonObject.getAsJsonArray("remove").iterator
+      while (removal.hasNext) addRemove(removal.next.getAsString)
+    }
     if (jsonObject.has("shaped")) {
       val shaped = jsonObject.getAsJsonArray("shaped").iterator
       while (shaped.hasNext) {
@@ -170,10 +173,6 @@ case class JsonRecipesHolder(file: File) {
         }
         addShapedRecipe(currentRecipe)
       }
-    }
-    if (jsonObject.has("remove")) {
-      val removal = jsonObject.getAsJsonArray("remove").iterator()
-      while (removal.hasNext) addRemove(removal.next.getAsString)
     }
     this
   }

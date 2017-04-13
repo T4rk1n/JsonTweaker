@@ -6,6 +6,8 @@ import net.minecraft.command.{ICommand, ICommandSender}
 import net.minecraft.server.MinecraftServer
 import net.minecraft.util.math.BlockPos
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 trait CommandTrait extends ICommand {
   def requireOp : Boolean
 
@@ -28,7 +30,7 @@ class ReloadCommand extends CommandTrait {
   override def requireOp: Boolean = true
 
   override def getAliases: util.List[String] = {
-    util.Collections.emptyList[String]()
+    util.Collections emptyList[String]()
   }
 
   override def isUsernameIndex(args: Array[String], index: Int): Boolean = false
@@ -36,10 +38,14 @@ class ReloadCommand extends CommandTrait {
   override def getName: String = "jtreload"
 
   override def execute(server: MinecraftServer, sender: ICommandSender, args: Array[String]): Unit = {
-    Tweaker.reload()
+    server addScheduledTask new Runnable {
+      override def run(): Unit = Tweaker.reload.onComplete(_ => {
+        Tweaker.LOGGER info "reloaded"
+      })
+    }
   }
 
   override def getTabCompletions(server: MinecraftServer, sender: ICommandSender, args: Array[String], targetPos: BlockPos): util.List[String] = {
-    util.Collections.emptyList[String]()
+    util.Collections emptyList[String]()
   }
 }
