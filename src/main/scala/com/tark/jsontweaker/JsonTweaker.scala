@@ -6,9 +6,11 @@ import java.nio.file.Files
 import com.google.gson._
 import com.google.gson.stream.JsonReader
 import mezz.jei.api.IJeiRuntime
+import net.minecraft.command.ICommandSender
 import net.minecraft.item.{Item, ItemStack}
 import net.minecraft.item.crafting.{CraftingManager, IRecipe}
 import net.minecraft.util.ResourceLocation
+import net.minecraft.util.text.TextComponentString
 import net.minecraftforge.common.config.Configuration
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventHandler
@@ -297,13 +299,13 @@ object Tweaker {
     if (jeiRuntime != null) jeiRuntime.getRecipeRegistry.addRecipe(iRecipe)
   }
 
-  def reload(): Future[Unit] = Future {
+  def reload(sender: ICommandSender): Future[Unit] = Future {
     LOGGER info "Reloading files."
     removedRecipes foreach addRecipeToRegistry
     removeRecipe(addedRecipes)
     removedRecipes = Array[IRecipe]()
     addedRecipes = Array[String]()
-    readRecipesFiles()
+    readRecipesFiles().onComplete(_ => sender.sendMessage(new TextComponentString("Reloaded json tweaks")))
   }
 
   def removeRecipe(output: Array[String], firstOnly: Boolean=true): Unit = {

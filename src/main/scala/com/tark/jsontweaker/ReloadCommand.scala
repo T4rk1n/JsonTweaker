@@ -5,6 +5,8 @@ import java.util
 import net.minecraft.command.{ICommand, ICommandSender}
 import net.minecraft.server.MinecraftServer
 import net.minecraft.util.math.BlockPos
+import net.minecraft.util.text.TextComponentString
+import net.minecraftforge.common.ForgeHooks
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -39,9 +41,7 @@ class ReloadCommand extends CommandTrait {
 
   override def execute(server: MinecraftServer, sender: ICommandSender, args: Array[String]): Unit = {
     server addScheduledTask new Runnable {
-      override def run(): Unit = Tweaker.reload().onComplete(_ => {
-        Tweaker.LOGGER info "reloaded"
-      })
+      override def run(): Unit = Tweaker.reload(sender)
     }
   }
 
