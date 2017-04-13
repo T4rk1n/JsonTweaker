@@ -18,9 +18,10 @@ import org.apache.logging.log4j.{LogManager, Logger}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.util.matching.Regex
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 
 /**
   * Shaped recipe creator
@@ -209,6 +210,7 @@ case class JsonRecipesHolder(file: File) {
 object Configs {
   var enableDefaultRecipes = true
   var enableReloadCommand = true
+  var asyncInit = true
 }
 
 
@@ -232,6 +234,7 @@ object Tweaker {
     val configs = new Configuration(new File(s"$configDir/$MODID/$MODID.cfg"), "2")
     Configs.enableDefaultRecipes = configs.getBoolean("enableDefaultRecipes", "recipes", true, "Enable the default recipes in vanilla.json")
     Configs.enableReloadCommand = configs.getBoolean("enableReloadCommand","commands", true, "Enable the command to reload the recipes.")
+    Configs.asyncInit = configs.getBoolean("asyncInit", "debug", true, "Disable the asynchronous file process from init if it cause problems")
     configs.save()
     val defaultRecipeFile = new File(s"$configDir/$MODID/vanilla.json")
     if (!defaultRecipeFile.exists()) {
@@ -247,7 +250,7 @@ object Tweaker {
 
   @EventHandler
   def postInit(event : FMLPostInitializationEvent): Unit = {
-    readRecipesFiles()
+    if (Configs.asyncInit) readRecipesFiles() else Await ready[Unit](readRecipesFiles, Duration.Inf)
   }
 
   @EventHandler

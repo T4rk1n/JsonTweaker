@@ -36,3 +36,7 @@ Also works with ore dictionary as ore domain.
 }
 ```
 
+Reload the files with the command:
+
+`/jtreload`
+

@@ -39,7 +39,7 @@ class ReloadCommand extends CommandTrait {
 
   override def execute(server: MinecraftServer, sender: ICommandSender, args: Array[String]): Unit = {
     server addScheduledTask new Runnable {
-      override def run(): Unit = Tweaker.reload.onComplete(_ => {
+      override def run(): Unit = Tweaker.reload().onComplete(_ => {
         Tweaker.LOGGER info "reloaded"
       })
     }
