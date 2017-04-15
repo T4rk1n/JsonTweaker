@@ -5,7 +5,7 @@ import java.nio.file.Files
 
 import com.google.gson._
 import com.google.gson.stream.JsonReader
-import mezz.jei.api.IJeiRuntime
+
 import net.minecraft.command.ICommandSender
 import net.minecraft.item.{Item, ItemStack}
 import net.minecraft.item.crafting.{CraftingManager, IRecipe}
@@ -18,7 +18,7 @@ import net.minecraftforge.fml.common.event.{FMLPostInitializationEvent, FMLPreIn
 import net.minecraftforge.oredict.ShapedOreRecipe
 import org.apache.logging.log4j.{LogManager, Logger}
 
-import scala.collection.mutable
+import scala.collection.{JavaConverters, mutable}
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Await, Future}
 import scala.util.matching.Regex
@@ -212,7 +212,7 @@ case class JsonRecipesHolder(file: File) {
 object Configs {
   var enableDefaultRecipes = true
   var enableReloadCommand = true
-  var asyncInit = true
+  var asyncInit = false
 }
 
 
@@ -228,7 +228,6 @@ object Tweaker {
   var addedRecipes: Array[String] = Array[String]()
 
   var configDir = ""
-  var jeiRuntime: IJeiRuntime = _
 
   @EventHandler
   def preInit(event : FMLPreInitializationEvent): Unit = {
@@ -236,7 +235,7 @@ object Tweaker {
     val configs = new Configuration(new File(s"$configDir/$MODID/$MODID.cfg"), "2")
     Configs.enableDefaultRecipes = configs.getBoolean("enableDefaultRecipes", "recipes", true, "Enable the default recipes in vanilla.json")
     Configs.enableReloadCommand = configs.getBoolean("enableReloadCommand","commands", true, "Enable the command to reload the recipes.")
-    Configs.asyncInit = configs.getBoolean("asyncInit", "debug", true, "Disable the asynchronous file process from init if it cause problems")
+    Configs.asyncInit = configs.getBoolean("asyncInit", "debug", false, "Enable the asynchronous loading of files in, (May causes problems with other mods).")
     configs.save()
     val defaultRecipeFile = new File(s"$configDir/$MODID/vanilla.json")
     if (!defaultRecipeFile.exists()) {
@@ -296,7 +295,7 @@ object Tweaker {
 
   def addRecipeToRegistry(iRecipe: IRecipe): Unit = {
     craftingManager.addRecipe(iRecipe)
-    if (jeiRuntime != null) jeiRuntime.getRecipeRegistry.addRecipe(iRecipe)
+    if (JeiThings.hasJei) JeiThings addRecipe iRecipe
   }
 
   def reload(sender: ICommandSender): Future[Unit] = Future {
@@ -327,7 +326,7 @@ object Tweaker {
     i()
     val removed = toRemove.result.to[Array]
     removedRecipes = removedRecipes ++ removed
-    if (jeiRuntime != null) removed foreach jeiRuntime.getRecipeRegistry.removeRecipe
+    if (JeiThings.hasJei) removed foreach JeiThings.removeRecipe
   }
 }
 
